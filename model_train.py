@@ -7,6 +7,7 @@ from sklearn.neighbors import KNeighborsRegressor
 from sklearn.pipeline import make_pipeline
 import joblib
 import os
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 # Create data directory if it doesn't exist
 if not os.path.exists('data'):
@@ -69,32 +70,15 @@ def generate_polynomial_dataset():
     return df
 
 def generate_knn_dataset():
-    """Generate KNN Regression dataset for student performance prediction."""
-    np.random.seed(42)
-    n_samples = 200
+    """Generate KNN dataset for fruit prediction based on weight and texture."""
+    # Create the dataset
+    data = {
+        'Weight': [150, 170, 140, 130, 180, 190, 160, 175, 155, 165, 145, 185],
+        'Texture': [0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1],
+        'Label': [0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1]
+    }
     
-    # Generate study hours (between 1 and 8 hours per week)
-    study_hours = np.random.uniform(1, 8, n_samples)
-    
-    # Generate previous scores (between 40 and 95)
-    prev_scores = np.random.uniform(40, 95, n_samples)
-    
-    # Calculate test scores
-    test_scores = (
-        50 +  # Base score
-        (25 * study_hours / 8) +  # Up to 25 points for study hours
-        (25 * (prev_scores - 40) / 55) +  # Up to 25 points for previous performance
-        np.random.normal(0, 2, n_samples)  # Small random variation
-    )
-    
-    # Ensure scores are within valid range
-    test_scores = np.clip(test_scores, 0, 100)
-    
-    df = pd.DataFrame({
-        'study_hours': study_hours,
-        'prev_score': prev_scores,
-        'test_score': test_scores
-    })
+    df = pd.DataFrame(data)
     df.to_csv('data/knn_dataset.csv', index=False)
     return df
 
@@ -150,21 +134,61 @@ def train_polynomial_model(df):
     return model
 
 def train_knn_model(df):
-    """Train KNN Regression model for student performance prediction."""
-    X = df[['study_hours', 'prev_score']].values
-    y = df['test_score'].values
+    """Train KNN model for fruit prediction."""
+    X = df[['Weight', 'Texture']]
+    y = df['Label']
     
-    # Scale features
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
+    # Split the data
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     
-    # Train model
-    model = KNeighborsRegressor(n_neighbors=5)
-    model.fit(X_scaled, y)
+    # Create and train the model
+    model = make_pipeline(
+        StandardScaler(),
+        KNeighborsRegressor(
+            n_neighbors=3,  # Using smaller k due to smaller dataset
+            weights='distance',
+            metric='minkowski',
+            p=2,
+            n_jobs=-1
+        )
+    )
+    model.fit(X_train, y_train)
     
-    # Save both scaler and model
-    joblib.dump((scaler, model), 'data/knn_model.pkl')
-    return scaler, model
+    # Save the model
+    joblib.dump(model, 'data/knn_model.joblib')
+    
+    # Calculate and print metrics
+    train_score = model.score(X_train, y_train)
+    test_score = model.score(X_test, y_test)
+    
+    y_pred = model.predict(X_test)
+    y_pred_binary = (y_pred > 0.5).astype(int)
+    
+    accuracy = accuracy_score(y_test, y_pred_binary)
+    precision = precision_score(y_test, y_pred_binary)
+    recall = recall_score(y_test, y_pred_binary)
+    f1 = f1_score(y_test, y_pred_binary)
+    
+    print(f"\nKNN Model Performance Metrics:")
+    print(f"Train Score: {train_score:.4f}")
+    print(f"Test Score: {test_score:.4f}")
+    print(f"Accuracy: {accuracy:.4f}")
+    print(f"Precision: {precision:.4f}")
+    print(f"Recall: {recall:.4f}")
+    print(f"F1 Score: {f1:.4f}")
+    
+    # Add some example predictions
+    example_data = pd.DataFrame({
+        'Weight': [160, 175, 145, 185],
+        'Texture': [0, 1, 0, 1]
+    })
+    example_predictions = model.predict(example_data)
+    print("\nExample Predictions:")
+    for i, (weight, texture) in enumerate(zip(example_data['Weight'], example_data['Texture'])):
+        pred = 1 if example_predictions[i] > 0.5 else 0
+        print(f"Weight: {weight}, Texture: {texture} -> Predicted Label: {pred}")
+    
+    return model
 
 def train_logistic_model(df):
     """Train Logistic Regression model for loan approval prediction."""

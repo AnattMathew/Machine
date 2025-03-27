@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Student Performance Prediction</title>
+    <title>Fruit Ripeness Prediction</title>
     <style>
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
@@ -12,13 +12,11 @@
             background: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%);
             color: #1e293b;
         }
-
         .container {
             max-width: 800px;
             margin: 40px auto;
             padding: 20px;
         }
-
         .card {
             background: rgba(255, 255, 255, 0.9);
             backdrop-filter: blur(10px);
@@ -26,22 +24,6 @@
             padding: 30px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
-
-        h1 {
-            color: #1e40af;
-            text-align: center;
-            margin: 0 0 20px 0;
-            font-size: 2rem;
-        }
-
-        .description {
-            text-align: center;
-            color: #475569;
-            margin-bottom: 30px;
-            font-size: 1rem;
-            line-height: 1.5;
-        }
-
         .back-button {
             display: inline-flex;
             align-items: center;
@@ -56,23 +38,32 @@
             backdrop-filter: blur(5px);
             transition: background 0.3s ease;
         }
-
         .back-button:hover {
             background: rgba(255, 255, 255, 0.3);
         }
-
+        h1 {
+            color: #1e40af;
+            text-align: center;
+            margin: 0 0 20px 0;
+            font-size: 2rem;
+        }
+        .description {
+            text-align: center;
+            color: #475569;
+            margin-bottom: 30px;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
         .form-group {
             margin-bottom: 25px;
         }
-
         label {
             display: block;
             margin-bottom: 10px;
             color: #1e40af;
             font-weight: 500;
         }
-
-        input {
+        input, select {
             width: 100%;
             padding: 12px;
             border: 2px solid #e2e8f0;
@@ -80,13 +71,20 @@
             font-size: 1rem;
             transition: border-color 0.3s ease;
             box-sizing: border-box;
+            background-color: white;
         }
-
-        input:focus {
+        select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%231e40af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 40px;
+        }
+        input:focus, select:focus {
             outline: none;
             border-color: #3b82f6;
         }
-
         button {
             width: 100%;
             padding: 14px;
@@ -99,91 +97,98 @@
             cursor: pointer;
             transition: transform 0.2s ease;
         }
-
         button:hover {
-            transform: translateY(-2px);
+            transform: translateY(-1px);
         }
-
         #result {
-            margin-top: 25px;
-            padding: 20px;
-            background: rgba(59, 130, 246, 0.1);
+            margin-top: 20px;
+            padding: 15px;
             border-radius: 10px;
             text-align: center;
             display: none;
+            font-weight: 500;
         }
-
-        #result.show {
-            display: block;
-            animation: fadeIn 0.5s ease;
+        .success {
+            background-color: #dcfce7;
+            color: #166534;
         }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .prediction-value {
-            color: #1e40af;
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-top: 10px;
+        .error {
+            background-color: #fee2e2;
+            color: #991b1b;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <a href="{{ url_for('home') }}" class="back-button">Back to Home</a>
+        <a href="/" class="back-button">← Back to Home</a>
         <div class="card">
-            <h1>Student Performance Prediction</h1>
-            <p class="description">Predict test scores based on weekly study hours and previous exam performance using KNN Regression</p>
+            <h1>Fruit Ripeness Prediction</h1>
+            <p class="description">Predict if a fruit is ripe based on its weight and texture</p>
             
             <form id="predictionForm">
                 <div class="form-group">
-                    <label for="x1">Weekly Study Hours:</label>
-                    <input type="number" id="x1" name="x1" required 
-                           placeholder="Enter weekly study hours (1-40)"
-                           min="1" max="40" step="0.5">
+                    <label for="weight">Weight (grams):</label>
+                    <input type="number" id="weight" name="x1" required min="130" max="190" step="1" placeholder="Enter weight (130-190)">
                 </div>
+                
                 <div class="form-group">
-                    <label for="x2">Previous Exam Score:</label>
-                    <input type="number" id="x2" name="x2" required 
-                           placeholder="Enter previous score (0-100)"
-                           min="0" max="100" step="0.1">
+                    <label for="texture">Texture:</label>
+                    <select id="texture" name="x2" required>
+                        <option value="">Select texture...</option>
+                        <option value="0">Smooth</option>
+                        <option value="1">Bumpy</option>
+                    </select>
                 </div>
-                <button type="submit">Predict Test Score</button>
+
+                <button type="submit">Predict Ripeness</button>
             </form>
+            
             <div id="result"></div>
         </div>
     </div>
 
     <script>
-        document.getElementById('predictionForm').onsubmit = function(e) {
+        document.getElementById('predictionForm').onsubmit = async (e) => {
             e.preventDefault();
             
-            fetch('/predict_knn', {
-                method: 'POST',
-                body: new FormData(this)
-            })
-            .then(response => response.json())
-            .then(data => {
-                const result = document.getElementById('result');
-                if (data.error) {
-                    result.innerHTML = `<h3 style="color: #dc2626;">${data.error}</h3>`;
+            const weight = document.getElementById('weight').value;
+            const texture = document.getElementById('texture').value;
+            
+            if (!texture) {
+                showResult('Please select a texture', false);
+                return;
+            }
+            
+            try {
+                const response = await fetch('/predict_knn', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `x1=${weight}&x2=${texture}`
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const prediction = parseFloat(data.prediction);
+                    const result = prediction >= 0.5 ? 'Ripe' : 'Not Ripe';
+                    const textureType = texture === '0' ? 'Smooth' : 'Bumpy';
+                    showResult(`Prediction for ${weight}g ${textureType} fruit: ${result}`, true);
                 } else {
-                    result.innerHTML = `
-                        <h3>Predicted Test Score</h3>
-                        <div class="prediction-value">${data.prediction}%</div>
-                    `;
+                    showResult(data.error || 'Prediction failed', false);
                 }
-                result.classList.add('show');
-            })
-            .catch(error => {
-                const result = document.getElementById('result');
-                result.innerHTML = `<h3 style="color: #dc2626;">Error: Could not predict test score</h3>`;
-                result.classList.add('show');
-            });
+            } catch (error) {
+                showResult('Error making prediction', false);
+            }
         };
+        
+        function showResult(message, success) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = message;
+            resultDiv.className = success ? 'success' : 'error';
+            resultDiv.style.display = 'block';
+        }
     </script>
 </body>
 </html>

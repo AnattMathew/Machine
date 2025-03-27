@@ -5,6 +5,7 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 import joblib
 from model_train import generate_all_datasets, train_all_models
+import time
 
 app = Flask(__name__)
 
@@ -34,7 +35,8 @@ def polynomial():
 
 @app.route('/knn')
 def knn():
-    return render_template('knn.html')
+    # Add version parameter to force template reload
+    return render_template('knn.html', version=int(time.time()))
 
 @app.route('/logistic')
 def logistic():
@@ -75,14 +77,28 @@ def predict_polynomial():
 @app.route('/predict_knn', methods=['POST'])
 def predict_knn():
     try:
-        study_hours = float(request.form['x1'])  # Weekly study hours
-        prev_score = float(request.form['x2'])   # Previous exam score
-        scaler, model = joblib.load('data/knn_model.pkl')
-        X = scaler.transform([[study_hours, prev_score]])
+        weight = float(request.form['x1'])    # Weight in grams
+        texture = float(request.form['x2'])   # Texture (0=Smooth, 1=Bumpy)
+        
+        if not (130 <= weight <= 190):
+            return jsonify({'error': 'Weight must be between 130 and 190 grams'}), 400
+            
+        if texture not in [0, 1]:
+            return jsonify({'error': 'Texture must be either Smooth (0) or Bumpy (1)'}), 400
+            
+        # Load the model
+        model = joblib.load('data/knn_model.joblib')
+        
+        # Standardize input
+        X = np.array([[weight, texture]])
         prediction = model.predict(X)[0]
+        
         return jsonify({'prediction': f"{prediction:.2f}"})
+    except ValueError as e:
+        return jsonify({'error': 'Please enter valid numbers'}), 400
     except Exception as e:
-        return jsonify({'error': 'Could not make prediction'}), 400
+        print(f"Error in prediction: {str(e)}")
+        return jsonify({'error': 'An error occurred while making the prediction'}), 400
 
 @app.route('/predict_logistic', methods=['POST'])
 def predict_logistic():
