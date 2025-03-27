@@ -13,10 +13,6 @@ app = Flask(__name__)
 if not os.path.exists('data'):
     os.makedirs('data')
 
-# Generate datasets and train models on startup
-generate_all_datasets()
-train_all_models()
-
 @app.route('/')
 def home():
     return render_template('index.html')
@@ -117,6 +113,10 @@ def predict_logistic():
         return jsonify({'error': 'Could not make prediction'}), 400
 
 if __name__ == '__main__':
-    # Use environment variables for host and port
+    # Create datasets and train models
+    generate_all_datasets()
+    train_all_models()
+    
+    # Get port from environment variable or use 5000 as default
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
